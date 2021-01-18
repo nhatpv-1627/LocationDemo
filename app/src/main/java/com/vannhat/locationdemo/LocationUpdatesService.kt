@@ -170,8 +170,8 @@ class LocationUpdatesService : Service() {
     }
 
     companion object {
-        private const val UPDATE_INTERVAL_IN_MILLISECONDS = 10000L
-        private const val FASTED_UPDATE_INTERVAL_IN_MILLISECONDS = 5000L
+        private const val UPDATE_INTERVAL_IN_MILLISECONDS = 5000L
+        private const val FASTED_UPDATE_INTERVAL_IN_MILLISECONDS = 1000L
         private const val TAG = "LocationUpdatesService"
         private const val CHANNEL_ID = "c1"
         private const val NOTIFICATION_ID = 68
