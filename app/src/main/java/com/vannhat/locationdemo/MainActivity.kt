@@ -7,8 +7,8 @@ import android.location.Location
 import android.net.Uri
 import android.os.Bundle
 import android.os.IBinder
+import android.os.PowerManager
 import android.provider.Settings
-import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.Toast
@@ -17,16 +17,36 @@ import androidx.core.app.ActivityCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.analytics.ktx.analytics
+import com.google.firebase.analytics.ktx.logEvent
+import com.google.firebase.ktx.Firebase
 
 class MainActivity : AppCompatActivity() {
 
     private var locationUpdatesService: LocationUpdatesService? = null
     private var isBounding = false
     private lateinit var btnLocation: Button
+    private lateinit var btnCrash: Button
+    private lateinit var btnGoToMap: Button
     private lateinit var locationReceiver: LocationReceiver
     private var isTrackingLocation = false
     private lateinit var adapter: LocationAdapter
     private lateinit var rvLocation: RecyclerView
+
+    // firebase analytic
+    private lateinit var firebaseAnalytics: FirebaseAnalytics
+
+    private var powerModeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+            if (pm.isDeviceIdleMode) {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
+                    setTurnScreenOn(true)
+                }
+            }
+        }
+    }
 
     private var serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -53,6 +73,8 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         btnLocation = findViewById(R.id.btnLocation)
+        btnGoToMap = findViewById(R.id.btnMap)
+        btnCrash = findViewById(R.id.btnCrash)
         rvLocation = findViewById(R.id.rvLocation)
         if (!checkPermission()) {
             requestPermission()
@@ -70,8 +92,34 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        btnCrash.setOnClickListener {
+            firebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_ITEM) {
+                param(FirebaseAnalytics.Param.ITEM_ID, 1)
+                param(FirebaseAnalytics.Param.ITEM_NAME, "hello")
+                param(FirebaseAnalytics.Param.CONTENT_TYPE, "image")
+            }
+            // GOTO setting with idle mode
+//            val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+//            if (powerManager.isIgnoringBatteryOptimizations(packageName)) {
+//                Toast.makeText(this, "Ignored", Toast.LENGTH_SHORT).show()
+//            } else {
+//                startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+//            }
+        }
+
+        btnGoToMap.setOnClickListener {
+            startActivity(Intent(this, MapActivity::class.java))
+        }
+
         adapter = LocationAdapter(mutableListOf())
         rvLocation.adapter = adapter
+
+        firebaseAnalytics = Firebase.analytics
+
+        registerReceiver(
+            powerModeReceiver,
+            IntentFilter(PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED)
+        )
     }
 
     private fun removeLocationUpdate() {
@@ -101,6 +149,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(locationReceiver)
+        unregisterReceiver(powerModeReceiver)
         locationUpdatesService?.removeLocationUpdate()
         super.onDestroy()
     }
@@ -175,20 +224,18 @@ class MainActivity : AppCompatActivity() {
     inner class LocationReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             intent?.getParcelableExtra<Location>(EXTRA_LOCATION)?.let { location ->
+                location.distanceTo(location)
                 Toast.makeText(
                     this@MainActivity,
-                    "Location: (${location.latitude},${location.longitude})",
+                    "Location: (${location.latitude}, ${location.longitude})",
                     Toast.LENGTH_SHORT
                 ).show()
                 this@MainActivity.addLocationToList(
                     " ${getUpdatedTime(this@MainActivity)} \n ${
-                        getLocationText(
-                            location
-                        )
-                    }"
+                        getLocationText(location)
+                    }  \n ${getPlaceName(location, this@MainActivity)}"
                 )
             }
-
         }
 
     }
