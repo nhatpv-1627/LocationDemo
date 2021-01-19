@@ -11,7 +11,6 @@ import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.widget.Button
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -27,6 +26,8 @@ class MainActivity : AppCompatActivity() {
     private var isTrackingLocation = false
     private lateinit var adapter: LocationAdapter
     private lateinit var rvLocation: RecyclerView
+
+    private val geofences = getSampleGeofencesData()
 
     private var serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -72,6 +73,7 @@ class MainActivity : AppCompatActivity() {
 
         adapter = LocationAdapter(mutableListOf())
         rvLocation.adapter = adapter
+
     }
 
     private fun removeLocationUpdate() {
@@ -175,17 +177,13 @@ class MainActivity : AppCompatActivity() {
     inner class LocationReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             intent?.getParcelableExtra<Location>(EXTRA_LOCATION)?.let { location ->
-                Toast.makeText(
-                    this@MainActivity,
-                    "Location: (${location.latitude},${location.longitude})",
-                    Toast.LENGTH_SHORT
-                ).show()
                 this@MainActivity.addLocationToList(
-                    " ${getUpdatedTime(this@MainActivity)} \n ${
-                        getLocationText(
-                            location
-                        )
-                    }"
+                    " ${getUpdatedTime(this@MainActivity)} \n ${getLocationText(location)}"
+                )
+                val geofencesPair = classifyGeofences(geofences, location)
+                Log.d(
+                    "ccccc", "entered: ${geofencesPair?.first?.map { it.name }}, " +
+                            "exited ${geofencesPair?.second?.map { it.name }}"
                 )
             }
 
