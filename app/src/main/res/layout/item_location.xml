@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="10dp"
         android:textColor="@color/black"
-        android:textSize="22sp"
+        android:textSize="13sp"
         tools:text="Hello VN sadf asdf asdf asdfasdasfdasdfasdfasdfasdfasdfasdfasdfasdfasdfasdf" />
 
 </LinearLayout>
